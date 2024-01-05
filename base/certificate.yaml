@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: home-assistant-prod
+  namespace: home-assistant
+spec:
+  secretName: hass-prod-cert
+  dnsNames:
+    - hass.k3s.example.com
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer

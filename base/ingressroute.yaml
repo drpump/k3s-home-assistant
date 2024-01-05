@@ -1,0 +1,15 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: home-assistant-route
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: HostSNI(`hass.k3s.example.com`)
+      services:
+        - name: home-assistant
+          port: 8123
+  tls:
+    secretName: hass-prod-cert
+    passthrough: true
