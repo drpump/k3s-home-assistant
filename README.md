@@ -6,13 +6,14 @@ Manifests should work as-is after changing domain names for certificates and ing
 
 ## Pre-requisites
 
+- k3s is installed and you have a working knowledge of `kubectl` and working with kubernetes resources
 - you have a domain name
 - cert-manager is deployed in k3s
 - LetsEncrypt production and staging ClusterIssuers are deployed in k3s
 - an endpoint is configured to handle ACME http01 requests to validate domain name ownership
 - optionally, dynamic volume provisioning is enabled (i.e. longhorn distributed filesystem deployed and configured as the default storage class)
 
-For more detail regarding cert-manager and letsencrypt config, see https://drpump.github.io/mqtt-k8s-tls/.
+For more detail regarding DNS, cert-manager and letsencrypt config, see https://drpump.github.io/mqtt-k8s-tls/.
 
 ## Usage
 
@@ -21,8 +22,22 @@ For more detail regarding cert-manager and letsencrypt config, see https://drpum
 1. Edit `overlay/kustomization.yaml` and set:
    - Timezone in the TZ variable (`configMapGenerator`)
    - Your preferred host + domain name in the two `patch` operations
-1. Build the deployment by using kubectl's built-in kustomize feature:  
+
+1. Apply the resources by using kubectl's built-in kustomize feature:  
    ```kubectl apply -k overlay/```
+
+1. Test by browsing to `http://<your-host-ip:8123`
+
+1. To enable TLS and host-based ingress routing, add the http configuration in `./http.yaml` to the home assistant `configuration.yaml`. 
+   - If you're using longhorn, use `lsblk` in the host OS to find the block devices longhorn has created and mount the home-assistant volume using `sudo mount /dev/sdX /mnt/hass`. In Ubuntu, the block devices are named `sda`, `sdb` etc. 
+   - If you're using the host filesystem, volumes are stored in `/var/lib/rancher/k3s/storage`. 
+   - After adding this configuration, restart by scaling pods to zero then one again using:
+   ```
+   $ kubectl scale statefulset -n home-assistant home-assistant --replicas=0
+   $ kubectl scale statefulset -n home-assistant home-assistant --replicas=1
+   ```
+
+1. Test by browsing to `https://hass.your.domain.name`, assuming this hostname routes to your k3s cluster.
 
 ## Notes
 
@@ -34,6 +49,6 @@ For more detail regarding cert-manager and letsencrypt config, see https://drpum
 
 - The `IngressRouteTCP` resource sets up host-based ingress routing on port 443 so that you can hit `https://hass.k3s.example.com` (replace with your domain name) regardless of which node in your cluster is running the Home Assistant pod. The `IngressRouteTCP` resource is specific to Traefik, which is the default ingress/load balancing solution in k3s. You will need to use a different resource to work with nginx or other ingress solutions. 
 
-- If migrating from a standalone Home Assistant instance, you can copy your config directory into the pod filesystem. If you're using longhorn, use `lsblk` in the host OS to find the block devices longhorn has created and mount using `sudo mount /dev/sdX /mnt/hass`. In Ubuntu, the block devices are named `sda`, `sdb` etc. Note that the block device name can change if your pod is rescheduled or restarted. 
+- If migrating from a standalone Home Assistant instance, you can copy the config directory from your existing instance into the pod filesystem. Don't forget to add the TLS config from `./http.yaml`.
 
 - This config was tested in a single node cluster (AMD64, Ubuntu 22.04, k3s v1.27.6). Comments about being able to run the home assistant pod on any node are theoretically correct but not yet tested. 

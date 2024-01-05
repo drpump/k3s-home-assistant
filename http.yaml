@@ -1,0 +1,6 @@
+http:
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 10.42.0.0/16
+  ssl_certificate: /ssl/tls.crt
+  ssl_key: /ssl/tls.key
